@@ -1,4 +1,4 @@
-const CACHE_NAME = "monitoramento-aee-v1";
+const CACHE_NAME = "monitoramento-aee-v2";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
