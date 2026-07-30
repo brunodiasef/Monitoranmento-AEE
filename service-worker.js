@@ -1,11 +1,11 @@
-const CACHE_NAME = "monitoramento-aee-v2";
+const CACHE_NAME = "monitoramento-aee-v3";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-512-maskable.png",
-  "./apple-touch-icon.png"
+  "./icon-192-v2.png",
+  "./icon-512-v2.png",
+  "./icon-512-maskable-v2.png",
+  "./apple-touch-icon-v2.png"
 ];
 
 self.addEventListener("install", (event) => {
