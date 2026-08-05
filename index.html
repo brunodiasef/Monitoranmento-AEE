@@ -223,6 +223,56 @@
   @media (max-width: 620px){ .select-grid{grid-template-columns: repeat(2, minmax(0,1fr));} }
   @media (max-width: 420px){ .select-grid{grid-template-columns: 1fr;} }
 
+  .filters-collapse{
+    margin-bottom:10px;
+  }
+
+  .filter-toggle-btn{
+    display:none;
+    align-items:center; gap:7px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--ink-soft);
+    border-radius:var(--radius-pill);
+    padding:0 16px;
+    height:44px;
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .filter-toggle-btn svg{width:15px; height:15px; flex-shrink:0;}
+  .filter-toggle-btn.has-value{
+    border-color:var(--primary);
+    color:var(--primary);
+    background:var(--primary-soft);
+  }
+  .filter-count-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px;
+    padding:0 5px;
+    border-radius:var(--radius-pill);
+    background:var(--primary);
+    color:#04140F;
+    font-size:11px;
+    font-weight:700;
+  }
+
+  @media (max-width: 780px){
+    .filter-toggle-btn{display:inline-flex;}
+    .filters-collapse{
+      display:none;
+      max-height:0;
+      overflow:hidden;
+    }
+    .filters-collapse.open{
+      display:block;
+      max-height:none;
+    }
+    .clear-btn{padding:0 14px;}
+  }
+
   .select-field{
     display:flex; flex-direction:column; gap:4px;
     position:relative;
@@ -488,13 +538,20 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="searchInput" type="text" placeholder="Buscar por estudante, professor ou observação…" autocomplete="off">
         </div>
-        <button class="clear-btn" id="clearBtn">Limpar filtros</button>
+        <button class="filter-toggle-btn" id="filterToggleBtn" type="button" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          Filtros
+          <span class="filter-count-badge" id="filterCountBadge" hidden>0</span>
+        </button>
+        <button class="clear-btn" id="clearBtn">Limpar</button>
         <button class="install-btn" id="installBtn" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
           Instalar app
         </button>
       </div>
-      <div class="select-grid" id="selectGrid"></div>
+      <div class="filters-collapse" id="filtersCollapse">
+        <div class="select-grid" id="selectGrid"></div>
+      </div>
       <div class="result-row">
         <span id="resultCount"><b>0</b> estudantes encontrados</span>
         <div class="active-chips" id="activeChips"></div>
@@ -643,6 +700,21 @@ const emptyState = document.getElementById('emptyState');
 const resultCount = document.getElementById('resultCount');
 const activeChips = document.getElementById('activeChips');
 const clearBtn = document.getElementById('clearBtn');
+const filterToggleBtn = document.getElementById('filterToggleBtn');
+const filtersCollapse = document.getElementById('filtersCollapse');
+const filterCountBadge = document.getElementById('filterCountBadge');
+
+filterToggleBtn.addEventListener('click', ()=>{
+  const isOpen = filtersCollapse.classList.toggle('open');
+  filterToggleBtn.setAttribute('aria-expanded', String(isOpen));
+});
+
+function updateFilterCountBadge(){
+  const total = filterDefs.reduce((sum, f) => sum + selected[f.id].size, 0);
+  filterCountBadge.hidden = total === 0;
+  filterCountBadge.textContent = total;
+  filterToggleBtn.classList.toggle('has-value', total > 0);
+}
 
 const chipLabels = {'f-serie':'Turma','f-nivel':'Nível','f-turno':'Turno','f-area':'Área','f-professor':'Professor','f-apoio':'Apoio'};
 const filterByKey = Object.fromEntries(filterDefs.map(d=>[d.id, d.key]));
@@ -667,6 +739,7 @@ function render(){
   });
 
   resultCount.innerHTML = `<b>${results.length}</b> ${results.length===1 ? 'estudante encontrado' : 'estudantes encontrados'}`;
+  updateFilterCountBadge();
 
   activeChips.innerHTML = '';
   filterDefs.forEach(f=>{
