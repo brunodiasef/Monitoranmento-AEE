@@ -459,6 +459,27 @@
   .tag.professor{background:var(--accent-soft); color:var(--accent); border-color:transparent;}
   .tag.tag-cid{background:var(--em-soft); color:var(--em); border-color:transparent; font-family:'IBM Plex Mono', monospace; letter-spacing:.02em;}
 
+  .multi-pro{
+    color:var(--primary);
+    font-weight:600;
+  }
+
+  .top-tags{margin-bottom:10px;}
+
+  .pro-list.multi{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .pro-list.multi .pro-item{
+    padding-top:12px;
+    border-top:1px dashed var(--border);
+  }
+  .pro-list.multi .pro-item:first-child{
+    padding-top:0;
+    border-top:none;
+  }
+
   .obs{
     font-size:13px;
     line-height:1.6;
@@ -752,7 +773,6 @@ function render(){
     return true;
   });
 
-  resultCount.innerHTML = `<b>${results.length}</b> ${results.length===1 ? 'estudante encontrado' : 'estudantes encontrados'}`;
   updateFilterCountBadge();
 
   activeChips.innerHTML = '';
@@ -770,34 +790,67 @@ function render(){
     });
   });
 
+  // group matching records by student (same name + same turma)
+  const groups = [];
+  const groupIndex = new Map();
+  results.forEach(d=>{
+    const key = d.estudante + '||' + d.serie;
+    if(!groupIndex.has(key)){
+      groupIndex.set(key, groups.length);
+      groups.push({
+        estudante: d.estudante, serie: d.serie, nivel: d.nivel, turno: d.turno,
+        cid: d.cid, inicio: d.inicio, records: []
+      });
+    }
+    const g = groups[groupIndex.get(key)];
+    if(!g.cid && d.cid) g.cid = d.cid;
+    if(!g.inicio && d.inicio) g.inicio = d.inicio;
+    g.records.push(d);
+  });
+
+  resultCount.innerHTML = `<b>${groups.length}</b> ${groups.length===1 ? 'estudante encontrado' : 'estudantes encontrados'}`;
+
   grid.innerHTML = '';
-  if(results.length === 0){
+  if(groups.length === 0){
     emptyState.style.display = 'block';
     return;
   }
   emptyState.style.display = 'none';
 
-  results.forEach((d, i)=>{
+  groups.forEach((g, gi)=>{
     const card = document.createElement('article');
-    card.className = `card nivel-${d.nivel === 'EM' ? 'EM' : 'EF'}`;
-    const obsId = `obs-${i}-${Math.random().toString(36).slice(2,7)}`;
+    card.className = `card nivel-${g.nivel === 'EM' ? 'EM' : 'EF'}`;
+
+    const proItemsHtml = g.records.map((d, ri)=>{
+      const obsId = `obs-${gi}-${ri}-${Math.random().toString(36).slice(2,7)}`;
+      return `
+        <div class="pro-item">
+          <div class="tag-row">
+            <span class="tag professor">${d.professor}</span>
+            <span class="tag">${d.area.replace('Professor de ','').replace('Professor ','')}</span>
+            ${d.apoio ? `<span class="tag">${d.apoio}</span>` : ''}
+            ${d.carga ? `<span class="tag">${d.carga}</span>` : ''}
+          </div>
+          <div class="obs" id="${obsId}">${d.obs}</div>
+          <button class="toggle-obs" data-target="${obsId}">Ver observação completa ↓</button>
+        </div>
+      `;
+    }).join('');
+
+    const topTagsHtml = `
+      ${g.cid ? `<span class="tag tag-cid">CID: ${g.cid}</span>` : ''}
+      ${g.inicio ? `<span class="tag">Desde ${g.inicio}</span>` : ''}
+    `;
+
     card.innerHTML = `
       <div class="card-body">
         <div class="card-top">
-          <h3 class="student-name">${d.estudante}</h3>
-          <span class="nivel-badge">${d.nivel}</span>
+          <h3 class="student-name">${g.estudante}</h3>
+          <span class="nivel-badge">${g.nivel}</span>
         </div>
-        <p class="meta-line">${d.serie}<span class="sep">·</span>${d.turno.split('/')[1] ? d.turno.split('/')[1].trim() : d.turno}</p>
-        <div class="tag-row">
-          <span class="tag professor">${d.professor}</span>
-          <span class="tag">${d.area.replace('Professor de ','').replace('Professor ','').replace('Intérprete de Libras','Intérprete de Libras')}</span>
-          ${d.apoio ? `<span class="tag">${d.apoio}</span>` : ''}
-          ${d.carga ? `<span class="tag">${d.carga}</span>` : ''}
-          ${d.cid ? `<span class="tag tag-cid">CID: ${d.cid}</span>` : ''}
-          ${d.inicio ? `<span class="tag">Desde ${d.inicio}</span>` : ''}
-        </div>
-        <div class="obs" id="${obsId}">${d.obs}</div>
-        <button class="toggle-obs" data-target="${obsId}">Ver observação completa ↓</button>
+        <p class="meta-line">${g.serie}<span class="sep">·</span>${g.turno.split('/')[1] ? g.turno.split('/')[1].trim() : g.turno}${g.records.length > 1 ? `<span class="sep">·</span><span class="multi-pro">${g.records.length} profissionais AEE</span>` : ''}</p>
+        ${topTagsHtml.trim() ? `<div class="tag-row top-tags">${topTagsHtml}</div>` : ''}
+        <div class="pro-list ${g.records.length > 1 ? 'multi' : ''}">${proItemsHtml}</div>
       </div>
     `;
     grid.appendChild(card);
